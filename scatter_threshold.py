@@ -9,7 +9,7 @@ import os
 import json
 from matplotlib.backend_bases import MouseButton
 import pdb
-import subprocess
+import pathlib
 import threshold_changes
 
 def parse_args():
@@ -43,42 +43,46 @@ def scatter_threshold(negative_dir, positive_dir = None):
         positive_dir(str): It is the directory name of the positive control run (run with secreting cells)
     """
     
+    neg = '/data/negative'
+    pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
     
+    positive = '/data/positive'
+    pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
     
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/" + ],shell=True)
-    subprocess.run(["mv /data/particles.csv particles1n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge2/particles.csv /data/" + ],shell=True)
-    subprocess.run(["mv /data/particles.csv particles2n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge5/particles.csv /data/" + ],shell=True)
-    subprocess.run(["mv /data/particles.csv particles5n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge6/particles.csv /data/" + ],shell=True)
-    subprocess.run(["mv /data/particles.csv particles6n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/negative/" + ],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles1n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge2/particles.csv /data/negative/" + ],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles2n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge5/particles.csv /data/negative/" + ],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles5n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge6/particles.csv /data/negative/" + ],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles6n.csv" + ],shell=True)
     
     
     #Read from the negative control directory
-    mprt1n = pd.read_csv('/data/particles1n.csv')
-    mprt2n = pd.read_csv('/data/particles2n.csv')
-    mprt5n = pd.read_csv('/data/particles5n.csv')
-    mprt6n = pd.read_csv('/data/particles6n.csv')
+    mprt1n = pd.read_csv('/data/negative/particles1n.csv')
+    mprt2n = pd.read_csv('/data/negative/particles2n.csv')
+    mprt5n = pd.read_csv('/data/negative/particles5n.csv')
+    mprt6n = pd.read_csv('/data/negative/particles6n.csv')
 
     mprt_datan = [mprt1n, mprt2n, mprt5n, mprt6n]
     combined_mprtn = pd.concat(mprt_datan, ignore_index=True)
     
     if (positive_dir is not None):
-		subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/" + ],shell=True)
-        subprocess.run(["mv /data/particles.csv particles1p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/" + ],shell=True)
-        subprocess.run(["mv /data/particles.csv particles2p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge5/particles.csv /data/" + ],shell=True)
-        subprocess.run(["mv /data/particles.csv particles5p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge6/particles.csv /data/" + ],shell=True)
-        subprocess.run(["mv /data/particles.csv particles6p.csv" + ],shell=True)
+		subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/positive/" + ],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles1p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/positive/" + ],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles2p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge5/particles.csv /data/positive/" + ],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles5p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge6/particles.csv /data/positive/" + ],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles6p.csv" + ],shell=True)
                 
         #Read from the positive control directory
-        mprt1p = pd.read_csv('/data/particles1p.csv')
-        mprt2p = pd.read_csv('/data/particles2p.csv')
-        mprt5p = pd.read_csv('/data/particles5p.csv')
-        mprt6p = pd.read_csv('/data/particles6p.csv')
+        mprt1p = pd.read_csv('/data/positive/particles1p.csv')
+        mprt2p = pd.read_csv('/data/positive/particles2p.csv')
+        mprt5p = pd.read_csv('/data/positive/particles5p.csv')
+        mprt6p = pd.read_csv('/data/positive/particles6p.csv')
 
         mprt_datap = [mprt1p, mprt2p, mprt5p, mprt6p]
         combined_mprtp = pd.concat(mprt_datap, ignore_index=True)
@@ -149,8 +153,8 @@ def scatter_threshold(negative_dir, positive_dir = None):
     #pdb.set_trace()
     Radius, DGM = threshold[0], threshold[1]
     
-    subprocess.run(["ssh slave python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
-    subprocess.run(["ssh master python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    subprocess.run(["ssh slave python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    subprocess.run(["ssh master python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
     
     
     """

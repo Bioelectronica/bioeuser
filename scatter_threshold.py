@@ -150,7 +150,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
     Radius, DGM = threshold[0], threshold[1]
     
     subprocess.run(["ssh slave python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
-    subprocess.run(["ssh slave python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    subprocess.run(["ssh master python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
     
     
     """

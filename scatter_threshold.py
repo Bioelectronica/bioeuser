@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +9,8 @@ import os
 import json
 from matplotlib.backend_bases import MouseButton
 import pdb
+import subprocess
+import threshold_changes
 
 def parse_args():
 
@@ -39,21 +42,43 @@ def scatter_threshold(negative_dir, positive_dir = None):
         negative_dir(str): It is the directory name of the negative control run ( run with no secreting cells)
         positive_dir(str): It is the directory name of the positive control run (run with secreting cells)
     """
+    
+    
+    
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/" + ],shell=True)
+    subprocess.run(["mv /data/particles.csv particles1n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge2/particles.csv /data/" + ],shell=True)
+    subprocess.run(["mv /data/particles.csv particles2n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge5/particles.csv /data/" + ],shell=True)
+    subprocess.run(["mv /data/particles.csv particles5n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge6/particles.csv /data/" + ],shell=True)
+    subprocess.run(["mv /data/particles.csv particles6n.csv" + ],shell=True)
+    
+    
     #Read from the negative control directory
-    mprt1n = pd.read_csv(negative_dir + '/' + 'opa_data_merge1' + '/' + 'particles.csv')
-    mprt2n = pd.read_csv(negative_dir + '/' + 'opa_data_merge2' + '/' + 'particles.csv')
-    mprt5n = pd.read_csv(negative_dir + '/' + 'opa_data_merge5' + '/' + 'particles.csv')
-    mprt6n = pd.read_csv(negative_dir + '/' + 'opa_data_merge6' + '/' + 'particles.csv')
+    mprt1n = pd.read_csv('/data/particles1n.csv')
+    mprt2n = pd.read_csv('/data/particles2n.csv')
+    mprt5n = pd.read_csv('/data/particles5n.csv')
+    mprt6n = pd.read_csv('/data/particles6n.csv')
 
     mprt_datan = [mprt1n, mprt2n, mprt5n, mprt6n]
     combined_mprtn = pd.concat(mprt_datan, ignore_index=True)
     
     if (positive_dir is not None):
+		subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/" + ],shell=True)
+        subprocess.run(["mv /data/particles.csv particles1p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/" + ],shell=True)
+        subprocess.run(["mv /data/particles.csv particles2p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge5/particles.csv /data/" + ],shell=True)
+        subprocess.run(["mv /data/particles.csv particles5p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge6/particles.csv /data/" + ],shell=True)
+        subprocess.run(["mv /data/particles.csv particles6p.csv" + ],shell=True)
+                
         #Read from the positive control directory
-        mprt1p = pd.read_csv(positive_dir + '/' + 'opa_data_merge1' + '/' + 'particles.csv')
-        mprt2p = pd.read_csv(positive_dir + '/' + 'opa_data_merge2' + '/' + 'particles.csv')
-        mprt5p = pd.read_csv(positive_dir + '/' + 'opa_data_merge5' + '/' + 'particles.csv')
-        mprt6p = pd.read_csv(positive_dir + '/' + 'opa_data_merge6' + '/' + 'particles.csv')
+        mprt1p = pd.read_csv('/data/particles1p.csv')
+        mprt2p = pd.read_csv('/data/particles2p.csv')
+        mprt5p = pd.read_csv('/data/particles5p.csv')
+        mprt6p = pd.read_csv('/data/particles6p.csv')
 
         mprt_datap = [mprt1p, mprt2p, mprt5p, mprt6p]
         combined_mprtp = pd.concat(mprt_datap, ignore_index=True)
@@ -124,8 +149,13 @@ def scatter_threshold(negative_dir, positive_dir = None):
     #pdb.set_trace()
     Radius, DGM = threshold[0], threshold[1]
     
+    subprocess.run(["ssh slave python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    subprocess.run(["ssh slave python /home/saveguest/git-repos/OpticalPodAnalyzer/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    
+    
+    """
 
-    with open('/home/saveguest/git-repos/OpticalPodAnalyzer/rta_settings_main.json', 'r') as f:
+    with open('/home/saveguest/git-repos/bioeuser/rta_settings_main.json', 'r') as f:
             data_json = json.load(f)
             #print("It is inside")
             
@@ -138,10 +168,12 @@ def scatter_threshold(negative_dir, positive_dir = None):
 	    json.dump(data_json, f)
 	    
     with open('/home/saveguest/git-repos/OpticalPodAnalyzer/rta_settings_main.json', 'r') as f:
-            data_json = json.load(f)
+        data_json = json.load(f)
+            
     #pdb.set_trace()
     os.chdir('/home/saveguest/git-repos/OpticalPodAnalyzer')
     subprocess.run(["python /home/saveguest/git-repos/OpticalPodAnalyzer/generatertajson.py"],shell=True)	
+    """
         #data_json['particlecriteria']['Radius'][0] = Radius
     #return combined_mprtn, combined_mprtp
     """

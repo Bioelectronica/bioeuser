@@ -35,11 +35,8 @@ for i,x in enumerate(ports):
 
 def viewdata(camstr,socket):
     dat=socket.recv_pyobj()
-    #pdb.set_trace()
-    try:
+    if dat is not None:
         cv2.imshow(camstr,dat)
-    except:
-        t=1
     if cv2.waitKey(1) & 0xFF==ord('q'):
         return False
     return True

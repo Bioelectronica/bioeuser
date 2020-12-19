@@ -46,8 +46,8 @@ def scatter_threshold(negative_dir, positive_dir = None):
     neg = '/data/negative'
     pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
     
-    positive = '/data/positive'
-    pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
+    pos = '/data/positive'
+    pathlib.Path(pos).mkdir(parents=True, exist_ok=True)
     
     subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/negative/"],shell=True)
     subprocess.run(["mv /data/negative/particles.csv /data/negative/particles1n.csv"],shell=True)
@@ -121,7 +121,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.legend(loc="upper right")
         plt.show()
 
-        if (positive_dir is None):       
+    if (positive_dir is None):       
         plt.figure(figsize=(16,9))
         plt.scatter(combined_mprtn['Radius'], combined_mprtn['Differential Grayscale Mean'], alpha=0.5, s=3)
         plt.legend(('Negative Control Run')) 
@@ -153,8 +153,8 @@ def scatter_threshold(negative_dir, positive_dir = None):
     #pdb.set_trace()
     Radius, DGM = threshold[0], threshold[1]
 
-    subprocess.run(["ssh slave python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
-    subprocess.run(["ssh master python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
+    subprocess.run(["ssh slave python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " +str(DGM)],shell=True)
+    subprocess.run(["ssh master python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " + str(DGM)],shell=True)
     
     
     """

@@ -3,12 +3,12 @@ import sys
 import json
 import pdb
 
-
+pdb.set_trace()
 if len(sys.argv) < 2:
     print("No arguments given!")
     sys.exit()
 elif len(sys.argv) < 3:
-    ia = list(sys.argv[-1])
+    ia = [sys.argv[-1]]
 else:
     ia = list(sys.argv[1:])
 

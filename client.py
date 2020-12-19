@@ -1,6 +1,8 @@
 import zmq
 import sys
 import json
+import pdb
+
 
 if len(sys.argv) < 2:
     print("No arguments given!")
@@ -22,7 +24,10 @@ for x in [ia]:
     if sys.argv[1]=='JSON':
         with open(ia[2],'r') as f:
             js=json.load(f)
-        ia=[ia[0],ia[1],js]
+        if len(ia) > 3:
+            ia=[ia[0],ia[1],js,ia[3]]
+        else:
+            ia=[ia[0],ia[1],js,'']
     s1.send_pyobj(ia)
     s2.send_pyobj(ia)
     print("Sending...")

@@ -29,6 +29,9 @@ for x in [ia]:
             ia=[ia[0],ia[1],js,'']
     s1.send_pyobj(ia)
     s2.send_pyobj(ia)
+    #if sys.argv[1] == 'hwtest':
+    #    subprocess.Popen(["xfce4-terminal -x ssh master journalctl -ef -u bioehwtest"],shell=True)
+    #    subprocess.Popen(["xfce4-terminal -x ssh slave journalctl -ef -u worker_to_controller"],shell=True)
     print("Sending...")
     msg=s1.recv_string()
     msg2=s2.recv_string()

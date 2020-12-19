@@ -1,5 +1,7 @@
 import json
 import pdb
+import argparse
+import os
 
 
 
@@ -33,6 +35,8 @@ def threshold_changes(Radius, DGM):
         data_json = json.load(f)
     data_json['particlecriteria']['Radius'][0] = Radius
     data_json['particlecriteria']['Differential Grayscale Mean'][0] = DGM
+    
+    print("The radius and dgm values are", Radius, DGM)
 
     #pdb.set_trace()
 
@@ -43,7 +47,7 @@ def threshold_changes(Radius, DGM):
         data_json = json.load(f)
             
     #pdb.set_trace()
-    os.chdir('/home/saveguest/git-repos/OpticalPodAnalyzer')
+    #os.chdir('/home/saveguest/git-repos/OpticalPodAnalyzer')
     #subprocess.run(["python /home/saveguest/git-repos/OpticalPodAnalyzer/generatertajson.py"],shell=True)
     
     # Filenames
@@ -80,7 +84,7 @@ def threshold_changes(Radius, DGM):
         settings.update(roi_settings[cam])
         settings['bg'] = './bg_{}.tiff'.format(cam)
         settings['dataout'] = './opa_data_{}'.format(cam)
-        with open('rta_settings_{}.json'.format(cam), 'w') as f:
+        with open('/data/default_settings/rta_settings_{}.json'.format(cam), 'w') as f:
             json.dump(settings, f, indent=4)
             
             

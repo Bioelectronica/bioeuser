@@ -69,7 +69,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
     combined_mprtn = pd.concat(mprt_datan, ignore_index=True)
     
     if (positive_dir is not None):
-		subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/positive/" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/positive/" + ],shell=True)
         subprocess.run(["mv /data/positive/particles.csv /data/positive/particles1p.csv" + ],shell=True)
         subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/positive/" + ],shell=True)
         subprocess.run(["mv /data/positive/particles.csv /data/positive/particles2p.csv" + ],shell=True)
@@ -86,10 +86,10 @@ def scatter_threshold(negative_dir, positive_dir = None):
 
         mprt_datap = [mprt1p, mprt2p, mprt5p, mprt6p]
         combined_mprtp = pd.concat(mprt_datap, ignore_index=True)
-        
-        
+
+
         #Plot and display the figure
-        
+
         plt.figure(figsize=(16,9))
         plt.scatter(combined_mprtp['Radius'], combined_mprtp['Differential Grayscale Mean'], alpha=0.5, s=3)
         plt.scatter(combined_mprtn['Radius'], combined_mprtn['Differential Grayscale Mean'], alpha=0.5, s=3)
@@ -98,7 +98,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.ylabel('Differential Grayscale Mean(DGM)', fontsize = 14)
         plt.suptitle('Differential Grayscale Mean(DGM) vs Radius', fontsize = 18) 
         plt.subplots_adjust(top=0.94)
-        
+
         #pdb.set_trace()
         clicks=plt.ginput(n=1,show_clicks=True,mouse_add=MouseButton.LEFT)
         print(clicks)
@@ -112,16 +112,16 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.ylabel('Differential Grayscale Mean(DGM)', fontsize = 14)
         plt.suptitle('Differential Grayscale Mean(DGM) vs Radius', fontsize = 18) 
         plt.subplots_adjust(top=0.94)
-        
+
         radius_max = combined_mprtn['Radius'].max() if combined_mprtn['Radius'].max() > combined_mprtp['Radius'].max() else combined_mprtp['Radius'].max()
         dgm_max = combined_mprtn['Differential Grayscale Mean'].max() if combined_mprtn['Differential Grayscale Mean'].max() > combined_mprtp['Differential Grayscale Mean'].max() else combined_mprtp['Differential Grayscale Mean'].max()
-        
+
         plt.hlines(threshold[1], threshold[0], radius_max, colors = "red", label = "Radius Threhold")
         plt.vlines(threshold[0], threshold[1], dgm_max, colors = "green", label = "DGM Threshold")
         plt.legend(loc="upper right")
         plt.show()
-        
-    if (positive_dir is None):       
+
+        if (positive_dir is None):       
         plt.figure(figsize=(16,9))
         plt.scatter(combined_mprtn['Radius'], combined_mprtn['Differential Grayscale Mean'], alpha=0.5, s=3)
         plt.legend(('Negative Control Run')) 
@@ -129,7 +129,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.ylabel('Differential Grayscale Mean(DGM)', fontsize = 14)
         plt.suptitle('Differential Grayscale Mean(DGM) vs Radius', fontsize = 18) 
         plt.subplots_adjust(top=0.94)
-        
+
         #pdb.set_trace()
         clicks=plt.ginput(n=1,show_clicks=True,mouse_add=MouseButton.LEFT)
         print(clicks)
@@ -142,7 +142,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.ylabel('Differential Grayscale Mean(DGM)', fontsize = 14)
         plt.suptitle('Differential Grayscale Mean(DGM) vs Radius', fontsize = 18) 
         plt.subplots_adjust(top=0.94)
-        
+
         radius_max = combined_mprtn['Radius'].max() 
         dgm_max = combined_mprtn['Differential Grayscale Mean'].max() 
         plt.hlines(threshold[1], threshold[0], radius_max, colors = "red", label = "Radius Threhold")
@@ -152,7 +152,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
     
     #pdb.set_trace()
     Radius, DGM = threshold[0], threshold[1]
-    
+
     subprocess.run(["ssh slave python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
     subprocess.run(["ssh master python laptop:/home/saveguest/git-repos/bioeuser/threshold_changes.py -r " + Radius + " -d " + DGM],shell=True)
     

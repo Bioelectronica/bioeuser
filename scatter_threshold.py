@@ -49,14 +49,14 @@ def scatter_threshold(negative_dir, positive_dir = None):
     positive = '/data/positive'
     pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
     
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/negative/" + ],shell=True)
-    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles1n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge2/particles.csv /data/negative/" + ],shell=True)
-    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles2n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge5/particles.csv /data/negative/" + ],shell=True)
-    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles5n.csv" + ],shell=True)
-    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge6/particles.csv /data/negative/" + ],shell=True)
-    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles6n.csv" + ],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge1/particles.csv /data/negative/"],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles1n.csv"],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge2/particles.csv /data/negative/"],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles2n.csv"],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge5/particles.csv /data/negative/"],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles5n.csv"],shell=True)
+    subprocess.run(["scp -r master:" + negative_dir + "/opa_data_merge6/particles.csv /data/negative/"],shell=True)
+    subprocess.run(["mv /data/negative/particles.csv /data/negative/particles6n.csv"],shell=True)
     
     
     #Read from the negative control directory
@@ -69,14 +69,14 @@ def scatter_threshold(negative_dir, positive_dir = None):
     combined_mprtn = pd.concat(mprt_datan, ignore_index=True)
     
     if (positive_dir is not None):
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/positive/" + ],shell=True)
-        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles1p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/positive/" + ],shell=True)
-        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles2p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge5/particles.csv /data/positive/" + ],shell=True)
-        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles5p.csv" + ],shell=True)
-        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge6/particles.csv /data/positive/" + ],shell=True)
-        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles6p.csv" + ],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge1/particles.csv /data/positive/"],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles1p.csv"],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge2/particles.csv /data/positive/"],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles2p.csv"],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge5/particles.csv /data/positive/"],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles5p.csv"],shell=True)
+        subprocess.run(["scp -r master:" + positive_dir + "/opa_data_merge6/particles.csv /data/positive/"],shell=True)
+        subprocess.run(["mv /data/positive/particles.csv /data/positive/particles6p.csv"],shell=True)
                 
         #Read from the positive control directory
         mprt1p = pd.read_csv('/data/positive/particles1p.csv')

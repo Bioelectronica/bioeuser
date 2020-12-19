@@ -3,7 +3,6 @@ import sys
 import json
 import pdb
 
-pdb.set_trace()
 if len(sys.argv) < 2:
     print("No arguments given!")
     sys.exit()

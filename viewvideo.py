@@ -18,19 +18,19 @@ def connect_to_streams(zmqport):
     socket.setsockopt(zmq.CONFLATE,1)
     return socket
 
-def create_windows(p):
+def create_windows(p,i):
     camstr=str(p)
     camdims=[640,480]
     cv2.namedWindow(camstr,cv2.WINDOW_NORMAL)
     cv2.resizeWindow(camstr, 640, 480)
-    cv2.moveWindow(camstr, 100, 100)
+    cv2.moveWindow(camstr, 100+i, 100)
 
 plist=[]
 for i in ports:
     plist.append(connect_to_streams(i))
 
-for i in ports:
-    create_windows(i)
+for i,x in enumerate(ports):
+    create_windows(x,i*5)
 
 
 def viewdata(camstr,socket):

@@ -12,6 +12,7 @@ import pdb
 import pathlib
 import threshold_changes
 
+
 def parse_args():
 
     """ Parses command line arguments
@@ -153,8 +154,18 @@ def scatter_threshold(negative_dir, positive_dir = None):
     #pdb.set_trace()
     Radius, DGM = threshold[0], threshold[1]
 
-    subprocess.run(["ssh slave python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " +str(DGM)],shell=True)
-    subprocess.run(["ssh master python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " + str(DGM)],shell=True)
+    #subprocess.run(["ssh slave python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " +str(DGM)],shell=True)
+    #subprocess.run(["ssh master python < /home/saveguest/git-repos/bioeuser/threshold_changes.py - -r " + str(Radius) + " -d " + str(DGM)],shell=True)
+    
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_merge1.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_merge2.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_merge5.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_merge6.json particlecriteria"],shell=True)
+    
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_waste3.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_waste7.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_sample4.json particlecriteria"],shell=True)
+    subprocess.run(["python ~/git-repos/bioeuser/client.py /data/default_settings/rta_settings_sample8.json particlecriteria"],shell=True)
     
     
     """

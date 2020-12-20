@@ -3,6 +3,7 @@ import urwid
 import subprocess
 from client import client
 import time
+import pdb
 
 keep_running = True
 exp_running = False
@@ -59,6 +60,10 @@ class CascadingBoxes(urwid.WidgetPlaceholder):
 
 def handle_experiment(button):
     global exp_running
+    if exp_running:
+        client('stop')
+    else:
+        client('start')
     exp_running = not(exp_running)
     raise urwid.ExitMainLoop()
 

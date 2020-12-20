@@ -42,26 +42,7 @@ def client(command, params = None, masterurl=masterurl_default,
     
     print('Executing command {} with params {} on\nMaster: {}\nSlave: {}'
             .format(command, params, masterurl, slaveurl))
-    
-
-    '''
-    if len(sys.argv) < 2:
-        print("No arguments given!")
-        sys.exit()
-    elif len(sys.argv) < 3:
-        ia = [sys.argv[-1]]
-    else:
-        ia = list(sys.argv[1:])
-    '''
-
-    c1 = zmq.Context()
-    s1 = c1.socket(zmq.REQ)
-    s1.connect(masterurl)
-
-    c2 = zmq.Context()
-    s2 = c2.socket(zmq.REQ)
-    s2.connect(slaveurl)
-   
+  
     if command == 'json':
         # Command format
         # json <instrument_json_filename_to_update> <updated_settings_json>
@@ -85,15 +66,23 @@ def client(command, params = None, masterurl=masterurl_default,
         return;
     
     # Send the messages to master and slave devices, print result
-    print("Sending to master...")
-    s1.send_pyobj(ia)
-    msg=s1.recv_string()
-    print(msg)
-    print("Sending to slave...")
-    s2.send_pyobj(ia)
-    msg2=s2.recv_string()
-    print(msg2)
- 
+    if masterurl != 'null':
+        print("Sending to master...")
+        c1 = zmq.Context()
+        s1 = c1.socket(zmq.REQ)
+        s1.connect(masterurl)
+        s1.send_pyobj(ia) 
+        msg=s1.recv_string()
+        print(msg)
+
+    if slaveurl != 'null':
+        print("Sending to slave...")
+        c2 = zmq.Context()
+        s2 = c2.socket(zmq.REQ)
+        s2.connect(slaveurl)
+        s2.send_pyobj(ia)
+        msg2=s2.recv_string()
+        print(msg2)
 
 def main():
     kwargs = parse_args()

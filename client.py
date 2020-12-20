@@ -62,24 +62,29 @@ def client(command, params = None, masterurl=masterurl_default,
     s2 = c2.socket(zmq.REQ)
     s2.connect(slaveurl)
    
-    if command=='json':
+    if command == 'json':
         # Command format
         # json <instrument_json_filename_to_update> <updated_settings_json>
-        with open(param[1],'r') as f:
+        with open(params[1],'r') as f:
             js=json.load(f)
-        ia=[command,param[0],js]
-    elif command=='hello':
+        ia=[command,params[0],js] 
+    elif command == 'hwtest':
+        pass
+        #subprocess.Popen(["xfce4-terminal -x ssh master journalctl -ef -u bioehwtest"],shell=True)
+        #subprocess.Popen(["xfce4-terminal -x ssh slave journalctl -ef -u worker_to_controller"],shell=True)
+    elif command == 'hello':
         ia=[command]
     else:
         print('Invalid command')
         return;
-    #s1.send_pyobj(ia)
-    s2.send_pyobj(ia)
     
+    # Send the messages to master and slave devices, print result
+    s1.send_pyobj(ia)
+    s2.send_pyobj(ia)
     print("Sending...")
-    #msg=s1.recv_string()
+    msg=s1.recv_string()
     msg2=s2.recv_string()
-    #print(msg)
+    print(msg)
     print(msg2)
  
 

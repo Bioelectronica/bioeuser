@@ -4,6 +4,7 @@ import threading
 from multiprocessing import RawArray
 import pdb
 import time
+import os
 
 names = ['merge1',\
         'merge2',\
@@ -53,7 +54,7 @@ gjobs=[]
 
 b=True
 b2=True
-while(True):
+while(os.path.isfile('/home/bioeuser1/expdone')==False):
     for i,p in enumerate(ports):
         b=viewdata(names[i],plist[i])
         if b==False:
@@ -62,7 +63,7 @@ while(True):
     if b2==False:
         break
     #time.sleep(2)
-
+os.remove('/home/bioeuser1/expdone')
 
 
 

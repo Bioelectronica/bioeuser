@@ -1,40 +1,57 @@
 #!/usr/bin/python
 import urwid
-import subprocess
+import subprocess as sp
 from client import client
 import time
 import pdb
+from scatter_threshold import scatter_threshold
+import os
+import json
 
+# Global UI state variables
 keep_running = True
 exp_running = False
+neg_ctrl_dir = None
+pos_ctrl_dir = None
+exp_base_dir = None
+thresholds = [0,0]
 
 def menu_button(caption, callback):
+    """Returns AtttrMap-decorated button, with a click callback"""
     button = urwid.Button(caption)
     urwid.connect_signal(button, 'click', callback)
     return urwid.AttrMap(button, None, focus_map='reversed')
 
 def sub_menu(caption, choices):
+    """Returns a menu button and a closure that will open the
+    menu when the button is clicked"""
     contents = menu(caption, choices)
     def open_menu(button):
         return top.open_box(contents)
     return menu_button([caption, u'...'], open_menu)
 
 def menu(title, choices):
+    """ builds a list box with a title and a sequence of widgets """
     body = [urwid.Text(title), urwid.Divider()]
     body.extend(choices)
     return urwid.ListBox(urwid.SimpleFocusListWalker(body))
 
 def item_chosen(button):
+    """ displays the user's choice """
     global keep_running
     keep_running = False
     response = urwid.Text([button.label,'\n'])
-    done = menu_button(u'Ok', exit_menus)
+    done = menu_button('Ok', exit_menus)
     top.open_box(urwid.Filler(urwid.Pile([response, done])))
 
 def exit_menus(button):
     raise urwid.ExitMainLoop()
 
 class CascadingBoxes(urwid.WidgetPlaceholder):
+    """ A widget that provides an open_box method, that displays a box on 
+    top of previous content. Each successive box shifted to the right and down.
+    Pressing ESC removes the current box and shows the previous one """
+
     max_box_levels = 4
     def __init__(self, box):
         super(CascadingBoxes, self).__init__(urwid.SolidFill(u'/'))
@@ -58,7 +75,12 @@ class CascadingBoxes(urwid.WidgetPlaceholder):
         else:
             return super(CascadingBoxes, self).keypress(size, key)
 
+#
+# BUTTON EVENT HANDLER FUNCTIONS
+#
+
 def handle_experiment(button):
+    """Called to start or stop the experiment"""
     global exp_running
     if exp_running:
         client('stop')
@@ -68,33 +90,84 @@ def handle_experiment(button):
     raise urwid.ExitMainLoop()
 
 def run_experiment(button):
-    subprocess.run(["mkdir","re"])
+    """??"""
+    sp.run(["mkdir","re"])
     raise urwid.ExitMainLoop()
 
 def hw_test(button):
+    """Runs hardware test"""
     client('hwtest')
     raise urwid.ExitMainLoop()
 
+def choose_neg_ctrl(button):
+    """Select directory on master containing negative control"""
+    global neg_ctrl_dir 
+    neg_ctrl_dir = button.label 
+    raise urwid.ExitMainLoop()
+
+def choose_pos_ctrl(button):
+    """Select directory on master containing negative control"""
+    global pos_ctrl_dir 
+    pos_ctrl_dir = button.label 
+    raise urwid.ExitMainLoop()
+
 def hello(button):
+    """Say hello to instrument"""
     client('hello')
     time.sleep(4)
     raise urwid.ExitMainLoop()
 
-def change_selection_criteria(button):
-    client('json', ['pathtomasterjson', 'pathtoclientjson'])
+def define_threshold(button):
+    """ Change selection criteria""" 
+    global pos_ctrl_dir
+    global neg_ctrl_dir
+    global exp_base_dir
+    global thresholds
+
+    # Allow user to select thresholds graphically
+    # Update the jsons in the master based on the selected threshold
+    if (pos_ctrl_dir is not None) and (neg_ctrl_dir is not None):
+        positive_dir = exp_base_dir + '/' + pos_ctrl_dir
+        negative_dir = exp_base_dir + '/' + neg_ctrl_dir
+        #negative_dir = '/data/data7/20201102_he22_app_team_runs_master/20201102145223_he22_AF_A7V6C02C03_clear_ERBR_sample1_run3'
+        #positive_dir = '/data/data7/20201104_he22_app_team_runs_master/20201104154224_he22_AF_A7V6C02C03_108_cells_sample_run3'
+        crtjson = scatter_threshold(negative_dir, positive_dir)
+        threshold[0] = crtjson['particlecriteria']['Radius']
+        threshold[1] = crtjson['particlecriteria']['Differential Grayscale Mean']
+        
+
+        # Create a json update file
+        json_file = '/tmp/newcriteria.json'
+        with open(json_file, 'w') as f:
+            json.dump(crtjson, f) 
+
+        # Update all the merge and sample jsons with this new value 
+        masterjsons = ['/master/data/default_settings/rta_settings_' + cam 
+                for cam in ['merge1', 'merge2', 'merge5', 'merge6',
+                    'sample4', 'sample8', 'waste3', 'waste7']]
+        for f in masterjsons:
+            client('json', [f, json_file]) 
+    else:
+        print('\nPlease define positive and negative control dirs before threshold adjustment')
+        time.sleep(4)
+    raise urwid.ExitMainLoop()
+
+def hello(button):
+    """Say hello to instrument"""
+    client('hello')
     time.sleep(4)
     raise urwid.ExitMainLoop()
 
 def experiment_state_label():
-    """Label for menu changes depending on if exp is running or stopped"""
+    """Label for menu. Depends on whether exp is running or stopped"""
     if exp_running:
         return "Stop Experiment 完成实验"
     else:
         return "Run Experiment 开始实验"
 
 def make_menus():
-    
-    
+    """ Creates a hierarchy of menus, used to create the CascadingBoxes widget""" 
+    global expdirs
     menu_items = [sub_menu(experiment_state_label(), [
                 menu_button("Confirm 确认 " + experiment_state_label(), handle_experiment),
                 menu_button("Cancel 取消", exit_menus),
@@ -105,33 +178,28 @@ def make_menus():
                 menu_button("Confirm 确认", hw_test),
                 menu_button("Cancel 取消", exit_menus),
                 ]),
-            sub_menu("Change Selection Criteria", [
-                menu_button("Confirm 确认", change_selection_criteria),
+           sub_menu("Change Selection Criteria", [
+                sub_menu("Select negative control", 
+                    [menu_button(d, choose_neg_ctrl) for d in expdirs]),
+                sub_menu("Select positive control", 
+                    [menu_button(d, choose_pos_ctrl) for d in expdirs]),
+                menu_button("Define threshold", define_threshold),
+                menu_button("View current threshold", view_threshold),
                 menu_button("Cancel 取消", exit_menus),
                 ]),
-            menu_button("Hello", hello)]
+            menu_button("Check connection to instrument", hello)]
     return menu("Bioelectronica Hypercell", menu_items)
-    '''
-    if True: 
-        m = menu("Bioelectronica Hypercell", [
-            sub_menu(experiment_state_label(), [
-                menu_button("Confirm 确认 " + experiment_state_label(), handle_experiment),
-                menu_button("Cancel 取消", exit_menus),
-                ]),
-            sub_menu("Run Hardware Test", [
-                menu_button("Confirm 确认", hw_test),
-                menu_button("Cancel 取消", exit_menus),
-                ]),
-            sub_menu("Change Selection Criteria", [
-                menu_button("Confirm 确认", change_selection_criteria),
-                menu_button("Cancel 取消", exit_menus),
-                ]),
-            menu_button("Hello", hello)
-        ])
-    
-    return m
-    '''
+
 
 while keep_running:
+    global expdirs
+    global exp_base_dir
+    
+    # SSH to master and get the list of data directories
+    expdirs = sp.check_output(["ssh", "master", "ls -d /data/*/"]).decode('utf-8').split('\n')
+    expdirs = [os.path.basename(d) for d in dirs]
+    exp_base_dir = os.path.dirname(dirs[0])
+
+    # Create and show the menus
     top = CascadingBoxes(make_menus())
     urwid.MainLoop(top, palette=[('reversed', 'standout', '')]).run()

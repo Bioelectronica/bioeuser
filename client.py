@@ -76,7 +76,7 @@ def client(command, params = None, masterurl=masterurl_default,
         ia=[command]
     elif command == 'start':
         ia=[command]
-        subprocess.Popen(["python ~/git-repos/bioeuser/viewvideo.py"],shell=True)
+        subprocess.Popen(["python ~/git-repos/bioeuser/viewvideo.py"],shell=True)        
     elif command == 'stop':
         ia=[command]
         open('/home/bioeuser1/expdone', 'w').close()

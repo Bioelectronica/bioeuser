@@ -3,7 +3,7 @@ import sys
 import json
 import pdb
 import argparse
-
+import subprocess
 
 masterurl_default = 'tcp://master:5551'
 slaveurl_default = 'tcp://slave:5552'
@@ -69,22 +69,29 @@ def client(command, params = None, masterurl=masterurl_default,
             js=json.load(f)
         ia=[command,params[0],js] 
     elif command == 'hwtest':
-        pass
+        ia = [command]
         #subprocess.Popen(["xfce4-terminal -x ssh master journalctl -ef -u bioehwtest"],shell=True)
         #subprocess.Popen(["xfce4-terminal -x ssh slave journalctl -ef -u worker_to_controller"],shell=True)
     elif command == 'hello':
         ia=[command]
+    elif command == 'start':
+        ia=[command]
+        subprocess.Popen(["python ~/git-repos/bioeuser/viewvideo.py"],shell=True)
+    elif command == 'stop':
+        ia=[command]
+        open('/home/bioeuser1/expdone', 'w').close()
     else:
         print('Invalid command')
         return;
     
     # Send the messages to master and slave devices, print result
+    print("Sending to master...")
     s1.send_pyobj(ia)
-    s2.send_pyobj(ia)
-    print("Sending...")
     msg=s1.recv_string()
-    msg2=s2.recv_string()
     print(msg)
+    print("Sending to slave...")
+    s2.send_pyobj(ia)
+    msg2=s2.recv_string()
     print(msg2)
  
 

@@ -11,10 +11,11 @@ import json
 # Global UI state variables
 keep_running = True
 exp_running = False
-neg_ctrl_dir = None
-pos_ctrl_dir = None
+neg_ctrl_dir = 'None'
+pos_ctrl_dir = 'None'
 exp_base_dir = None
 thresholds = [0,0]
+expdirs = None
 
 def menu_button(caption, callback):
     """Returns AtttrMap-decorated button, with a click callback"""
@@ -126,15 +127,15 @@ def define_threshold(button):
 
     # Allow user to select thresholds graphically
     # Update the jsons in the master based on the selected threshold
-    if (pos_ctrl_dir is not None) and (neg_ctrl_dir is not None):
-        positive_dir = exp_base_dir + '/' + pos_ctrl_dir
-        negative_dir = exp_base_dir + '/' + neg_ctrl_dir
-        #negative_dir = '/data/data7/20201102_he22_app_team_runs_master/20201102145223_he22_AF_A7V6C02C03_clear_ERBR_sample1_run3'
-        #positive_dir = '/data/data7/20201104_he22_app_team_runs_master/20201104154224_he22_AF_A7V6C02C03_108_cells_sample_run3'
+    if neg_ctrl_dir != 'None':
+        if pos_ctrl_dir != 'None':
+            positive_dir = exp_base_dir + '/' + pos_ctrl_dir[:-1]
+        else:
+            positive_dir = None
+        negative_dir = exp_base_dir + '/' + neg_ctrl_dir[:-1]
         crtjson = scatter_threshold(negative_dir, positive_dir)
-        threshold[0] = crtjson['particlecriteria']['Radius']
-        threshold[1] = crtjson['particlecriteria']['Differential Grayscale Mean']
-        
+        thresholds[0] = crtjson['particlecriteria']['Radius'][0]
+        thresholds[1] = crtjson['particlecriteria']['Differential Grayscale Mean'][0]
 
         # Create a json update file
         json_file = '/tmp/newcriteria.json'
@@ -142,19 +143,20 @@ def define_threshold(button):
             json.dump(crtjson, f) 
 
         # Update all the merge and sample jsons with this new value 
-        masterjsons = ['/master/data/default_settings/rta_settings_' + cam 
+        masterjsons = ['/data/default_settings/rta_settings_' + cam + '.json'
                 for cam in ['merge1', 'merge2', 'merge5', 'merge6',
                     'sample4', 'sample8', 'waste3', 'waste7']]
         for f in masterjsons:
             client('json', [f, json_file]) 
     else:
-        print('\nPlease define positive and negative control dirs before threshold adjustment')
+        print('\nNegative control directory required for threshold adjustment')
         time.sleep(4)
     raise urwid.ExitMainLoop()
 
-def hello(button):
-    """Say hello to instrument"""
-    client('hello')
+def view_threshold(button):
+    """view current thresholds"""
+    print('\nRadius: {:0.2f}, Differential Grayscale Mean {:0.0f}'.format(
+        thresholds[0], thresholds[1]))
     time.sleep(4)
     raise urwid.ExitMainLoop()
 
@@ -192,13 +194,12 @@ def make_menus():
 
 
 while keep_running:
-    global expdirs
-    global exp_base_dir
     
     # SSH to master and get the list of data directories
     expdirs = sp.check_output(["ssh", "master", "ls -d /data/*/"]).decode('utf-8').split('\n')
-    expdirs = [os.path.basename(d) for d in dirs]
-    exp_base_dir = os.path.dirname(dirs[0])
+    expdirs = [d[6:] for d in expdirs]
+    exp_base_dir = '/data'
+    expdirs = ['None'] + expdirs
 
     # Create and show the menus
     top = CascadingBoxes(make_menus())

@@ -52,7 +52,7 @@ names = ['merge1',\
         'sample8']
 ports=["7000","7010","7020","7030","8000","8010","8020","8030"]
 
-time.sleep(10)
+time.sleep(30)
 pclist=[]
 for i in ports:
     pclist.append(connect_to_streams(i))

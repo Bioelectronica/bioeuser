@@ -9,13 +9,14 @@ import os
 import json
 
 # Global UI state variables
-keep_running = True
-exp_running = False
-neg_ctrl_dir = 'None'
-pos_ctrl_dir = 'None'
-exp_base_dir = None
-thresholds = [0,0]
-expdirs = None
+keep_running = True      # Only way to exit the menu is to set this to false
+exp_running = False      # True if an experiment is currently running on instrument
+neg_ctrl_dir = 'None'    # Directory containing the negative control experiment
+pos_ctrl_dir = 'None'    # Direcotry containing postive control experiment
+exp_data_dir = '/data'   # Where data resides on master nuc (constant)
+thresholds = [0,0]       # Radius and DGM selected by user
+expdirs = None           # List of experiment directories in the master
+
 
 def menu_button(caption, callback):
     """Returns AtttrMap-decorated button, with a click callback"""
@@ -100,6 +101,20 @@ def hw_test(button):
     client('hwtest')
     raise urwid.ExitMainLoop()
 
+def get_master_dirs():
+    """returns a list of directories in the master /data directory"""
+    # SSH to master and get the list of data directories
+    dirs = sp.check_output(["ssh", "master", "ls -d " + exp_data_dir + 
+        "/*/"], shell=False, text=True).split('\n') 
+    dirs = [d[6:] for d in dirs]
+    return dirs
+
+def refresh_data_dir(button):
+    global expdirs
+    """Refreshes list of data directories on master"""
+    expdirs = ['None'] + get_master_dirs()
+    raise urwid.ExitMainLoop()
+
 def choose_neg_ctrl(button):
     """Select directory on master containing negative control"""
     global neg_ctrl_dir 
@@ -122,17 +137,17 @@ def define_threshold(button):
     """ Change selection criteria""" 
     global pos_ctrl_dir
     global neg_ctrl_dir
-    global exp_base_dir
+    global exp_data_dir
     global thresholds
 
     # Allow user to select thresholds graphically
     # Update the jsons in the master based on the selected threshold
     if neg_ctrl_dir != 'None':
         if pos_ctrl_dir != 'None':
-            positive_dir = exp_base_dir + '/' + pos_ctrl_dir[:-1]
+            positive_dir = exp_data_dir + '/' + pos_ctrl_dir[:-1]
         else:
             positive_dir = None
-        negative_dir = exp_base_dir + '/' + neg_ctrl_dir[:-1]
+        negative_dir = exp_data_dir + '/' + neg_ctrl_dir[:-1]
         crtjson = scatter_threshold(negative_dir, positive_dir)
         thresholds[0] = crtjson['particlecriteria']['Radius'][0]
         thresholds[1] = crtjson['particlecriteria']['Differential Grayscale Mean'][0]
@@ -167,9 +182,9 @@ def experiment_state_label():
     else:
         return "Run Experiment 开始实验"
 
-def make_menus():
+def make_menus(expdirs):
     """ Creates a hierarchy of menus, used to create the CascadingBoxes widget""" 
-    global expdirs
+    #global expdirs
     menu_items = [sub_menu(experiment_state_label(), [
                 menu_button("Confirm 确认 " + experiment_state_label(), handle_experiment),
                 menu_button("Cancel 取消", exit_menus),
@@ -181,6 +196,7 @@ def make_menus():
                 menu_button("Cancel 取消", exit_menus),
                 ]),
            sub_menu("Change Selection Criteria", [
+                menu_button("Refresh data directories", refresh_data_dir),
                 sub_menu("Select negative control", 
                     [menu_button(d, choose_neg_ctrl) for d in expdirs]),
                 sub_menu("Select positive control", 
@@ -192,15 +208,12 @@ def make_menus():
             menu_button("Check connection to instrument", hello)]
     return menu("Bioelectronica Hypercell", menu_items)
 
+# Load the data directories from master
+expdirs = ['None'] + get_master_dirs()
 
+
+# Start the UI loop
 while keep_running:
-    
-    # SSH to master and get the list of data directories
-    expdirs = sp.check_output(["ssh", "master", "ls -d /data/*/"]).decode('utf-8').split('\n')
-    expdirs = [d[6:] for d in expdirs]
-    exp_base_dir = '/data'
-    expdirs = ['None'] + expdirs
-
     # Create and show the menus
-    top = CascadingBoxes(make_menus())
+    top = CascadingBoxes(make_menus(expdirs))
     urwid.MainLoop(top, palette=[('reversed', 'standout', '')]).run()

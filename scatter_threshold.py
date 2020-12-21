@@ -49,7 +49,7 @@ def get_exp_data(negative_dir, positive_dir = None, location='master'):
 
     """
     # Make temporary directories for negative and positive control data
-    neg = '/data/negative'
+    neg = '/tmp/negative'
     pathlib.Path(neg).mkdir(parents=True, exist_ok=True)
     
     # if the location is 'local' use cp, but if on remote master use scp   
@@ -63,27 +63,27 @@ def get_exp_data(negative_dir, positive_dir = None, location='master'):
     # to the master nuc
     for i in [1,2,5,6]:
         subprocess.run([copy_cmd + negative_dir + 
-            "/opa_data_merge" + str(i) + "/particles.csv /data/negative/"],
+            "/opa_data_merge" + str(i) + "/particles.csv " + neg + "/"],
             shell=True)
-        subprocess.run(["mv /data/negative/particles.csv /data/negative/particles" + 
+        subprocess.run(["mv " + neg + "/particles.csv " + neg + "/particles" + 
             str(i) + "n.csv"], shell=True)
 
     # Combine the negative particle files into a single aggregate
-    mprt_datan = [pd.read_csv('/data/negative/particles' + str(i) + 'n.csv')
+    mprt_datan = [pd.read_csv(neg + "/particles" + str(i) + 'n.csv')
             for i in [1,2,5,6]]
     combined_mprtn = pd.concat(mprt_datan, ignore_index=True)
      
     if positive_dir is not None:
-        pos = '/data/positive'
+        pos = '/tmp/positive'
         pathlib.Path(pos).mkdir(parents=True, exist_ok=True)
         
         for i in [1,2,5,6]:
             subprocess.run([copy_cmd + positive_dir + 
-                "/opa_data_merge" + str(i) + "/particles.csv /data/positive/"],
+                "/opa_data_merge" + str(i) + "/particles.csv " + pos + "/"],
                 shell=True)
-            subprocess.run(["mv /data/positive/particles.csv /data/positive/particles" + 
+            subprocess.run(["mv " + pos + "/particles.csv " + pos + "/particles" + 
                 str(i) + "p.csv"], shell=True)
-        mprt_datap = [pd.read_csv('/data/positive/particles' + str(i) + 'p.csv')
+        mprt_datap = [pd.read_csv(pos + '/particles' + str(i) + 'p.csv')
             for i in [1,2,5,6]]
         combined_mprtp = pd.concat(mprt_datap, ignore_index=True)
     else:
@@ -107,7 +107,7 @@ def scatter_threshold(negative_dir, positive_dir = None):
     """
    
     combined_mprtn, combined_mprtp = get_exp_data(negative_dir, positive_dir, 
-            location='local')
+            location='master')
 
     if (positive_dir is not None):
 
@@ -127,9 +127,8 @@ def scatter_threshold(negative_dir, positive_dir = None):
 
         clicks=plt.ginput(n=1,show_clicks=True,mouse_add=MouseButton.LEFT)
         print(clicks)
-        threshold = int(clicks[0][0]), int(clicks[0][1])
+        threshold = clicks[0][0], int(clicks[0][1])
         plt.show()
-        #pdb.set_trace()
         plt.figure(figsize=(16,9))
         plt.scatter(combined_mprtp['Radius'], 
                 combined_mprtp['Differential Grayscale Mean'], 
@@ -167,12 +166,9 @@ def scatter_threshold(negative_dir, positive_dir = None):
         plt.suptitle('Differential Grayscale Mean(DGM) vs Radius', fontsize = 18) 
         plt.subplots_adjust(top=0.94)
 
-        #pdb.set_trace()
         clicks=plt.ginput(n=1,show_clicks=True,mouse_add=MouseButton.LEFT)
-        print(clicks)
-        threshold = int(clicks[0][0]), int(clicks[0][1])
+        threshold = clicks[0][0], int(clicks[0][1])
         plt.show()
-        #pdb.set_trace()
         plt.figure(figsize=(16,9))
         plt.scatter(combined_mprtn['Radius'], 
                 combined_mprtn['Differential Grayscale Mean'], 

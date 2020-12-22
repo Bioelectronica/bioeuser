@@ -83,6 +83,10 @@ def client(command, params = None, masterurl=masterurl_default,
         s2.send_pyobj(ia)
         msg2=s2.recv_string()
         print(msg2)
+    c1.term()
+    c2.term()
+    s1.close()
+    s2.close()
 
 def main():
     kwargs = parse_args()

@@ -1,19 +1,20 @@
 #!/usr/bin/python
 import urwid
 import subprocess as sp
-from client import client
 import time
 import pdb
-from scatter_threshold import scatter_threshold
+#from scatter_threshold import scatter_threshold
 import os
 import json
+from set_threshold import set_threshold_interactive
+
 
 # Global UI state variables
 keep_running = True      # Only way to exit the menu is to set this to false
 exp_running = False      # True if an experiment is currently running on instrument
 neg_ctrl_dir = 'None'    # Directory containing the negative control experiment
 pos_ctrl_dir = 'None'    # Direcotry containing postive control experiment
-exp_data_dir = '/data'   # Where data resides on master nuc (constant)
+exp_data_dir = '/data/data7'   # Where data resides on master nuc (constant)
 thresholds = [0,0]       # Radius and DGM selected by user
 expdirs = None           # List of experiment directories in the master
 
@@ -84,56 +85,74 @@ class CascadingBoxes(urwid.WidgetPlaceholder):
 def handle_experiment(button):
     """Called to start or stop the experiment"""
     global exp_running
+    """
     if exp_running:
         client('stop')
     else:
         client('start')
     exp_running = not(exp_running)
+    """
     raise urwid.ExitMainLoop()
 
-def run_experiment(button):
-    """??"""
-    sp.run(["mkdir","re"])
-    raise urwid.ExitMainLoop()
-
-def hw_test(button):
+def handle_hw_test(button):
     """Runs hardware test"""
+    """
     client('hwtest')
+    """
     raise urwid.ExitMainLoop()
 
 def get_master_dirs():
     """returns a list of directories in the master /data directory"""
     # SSH to master and get the list of data directories
-    dirs = sp.check_output(["ssh", "master", "ls -d " + exp_data_dir + 
-        "/*/"], shell=False, text=True).split('\n') 
+    """
+    dirs = sp.check_output(["ls","-d", exp_data_dir + "/*/", 
+                           shell=False, text=True).split('\n') 
+    """
+    dirs = [f.path for f in os.scandir(exp_data_dir) if f.is_dir()]
     dirs = [d[6:] for d in dirs]
     return dirs
 
-def refresh_data_dir(button):
+def handle_refresh_data_dir(button):
     global expdirs
     """Refreshes list of data directories on master"""
     expdirs = ['None'] + get_master_dirs()
     raise urwid.ExitMainLoop()
 
-def choose_neg_ctrl(button):
+def handle_choose_neg_ctrl(button):
     """Select directory on master containing negative control"""
     global neg_ctrl_dir 
     neg_ctrl_dir = button.label 
     raise urwid.ExitMainLoop()
 
-def choose_pos_ctrl(button):
+def handle_choose_pos_ctrl(button):
     """Select directory on master containing negative control"""
     global pos_ctrl_dir 
     pos_ctrl_dir = button.label 
     raise urwid.ExitMainLoop()
 
-def hello(button):
+def handle_hello(button):
     """Say hello to instrument"""
+    """
     client('hello')
     time.sleep(4)
+    """
     raise urwid.ExitMainLoop()
 
-def define_threshold(button):
+def handle_shutdown(button):
+    """Shutdown the instrument"""
+    """
+    client('shutdown')
+    time.sleep(2)
+    """
+    raise urwid.ExitMainLoop()
+
+def handle_quit(button):
+    """ Quit the menu system """
+    global keep_running
+    keep_running = False
+    raise urwid.ExitMainLoop()
+
+def handle_set_threshold(button):
     """ Change selection criteria""" 
     global pos_ctrl_dir
     global neg_ctrl_dir
@@ -142,71 +161,97 @@ def define_threshold(button):
 
     # Allow user to select thresholds graphically
     # Update the jsons in the master based on the selected threshold
+    # A negative control experiment directory must be selected, positive one is optional
     if neg_ctrl_dir != 'None':
         if pos_ctrl_dir != 'None':
             positive_dir = exp_data_dir + '/' + pos_ctrl_dir[:-1]
         else:
             positive_dir = None
         negative_dir = exp_data_dir + '/' + neg_ctrl_dir[:-1]
+
+        # Interactively create a json file containing criteria
         crtjson = scatter_threshold(negative_dir, positive_dir)
         thresholds[0] = crtjson['particlecriteria']['Radius'][0]
         thresholds[1] = crtjson['particlecriteria']['Differential Grayscale Mean'][0]
 
-        # Create a json update file
         json_file = '/tmp/newcriteria.json'
         with open(json_file, 'w') as f:
-            json.dump(crtjson, f) 
+            json.dump(crtjson, f)
 
-        # Update all the merge and sample jsons with this new value 
+        # Update all the merge and sample jsons with the user selected value
         masterjsons = ['/data/default_settings/rta_settings_' + cam + '.json'
                 for cam in ['merge1', 'merge2', 'merge5', 'merge6',
                     'sample4', 'sample8', 'waste3', 'waste7']]
-        for f in masterjsons:
-            client('json', [f, json_file]) 
+        for mj in masterjsons:
+            with open(mj, 'r') as f:
+                js = json.load(f)
+            update_dict(js, crtjson)
+            with open(mj[:-5] + '_new.json', 'w') as nf:
+                json.dump(js, nf, indent=4)
     else:
         print('\nNegative control directory required for threshold adjustment')
         time.sleep(4)
     raise urwid.ExitMainLoop()
 
-def view_threshold(button):
+def handle_view_threshold(button):
     """view current thresholds"""
-    print('\nRadius: {:0.2f}, Differential Grayscale Mean {:0.0f}'.format(
-        thresholds[0], thresholds[1]))
+    response = urwid.Text([button.label,'\n'])
+    done = menu_button('Ok', exit_menus)
+    top.open_box(urwid.Filler(urwid.Pile([response, done])))
     time.sleep(4)
+
+    #print('\nRadius: {:0.2f}, Differential Grayscale Mean {:0.0f}'.format(
+    #    thresholds[0], thresholds[1]))
+    #time.sleep(4)
     raise urwid.ExitMainLoop()
 
 def experiment_state_label():
-    """Label for menu. Depends on whether exp is running or stopped"""
+    """Returns a text label for menu reflecting experiment state.  
+    Depends on whether exp is running or stopped"""
     if exp_running:
         return "Stop Experiment 完成实验"
     else:
         return "Run Experiment 开始实验"
 
 def make_menus(expdirs):
-    """ Creates a hierarchy of menus, used to create the CascadingBoxes widget""" 
-    #global expdirs
+    """ Creates a hierarchy of menus, used to create the CascadingBoxes widget
+
+    Args:
+        expdirs(list):  list of experimental directories to show in menu
+    
+    Returns:
+        obj: A urwid menu object
+    """
+
+    """
+    # Start or stop experiment
     menu_items = [sub_menu(experiment_state_label(), [
                 menu_button("Confirm 确认 " + experiment_state_label(), handle_experiment),
                 menu_button("Cancel 取消", exit_menus),
                 ])]
+    # Run hardware test
+    sub_menu("Run Hardware Test", [
+        menu_button("Confirm 确认", handle_hw_test),
+        menu_button("Cancel 取消", exit_menus),
+        ]), 
+    menu_button("Check connection to instrument", handle_hello),
+    menu_button("Shutdown instrument", handle_shutdown),
+    """
     if not(exp_running):
-        menu_items = menu_items + [
-            sub_menu("Run Hardware Test", [
-                menu_button("Confirm 确认", hw_test),
-                menu_button("Cancel 取消", exit_menus),
-                ]),
+        menu_items = [
            sub_menu("Change Selection Criteria", [
-                menu_button("Refresh data directories", refresh_data_dir),
+                menu_button("Refresh data directories", handle_refresh_data_dir),
                 sub_menu("Select negative control", 
-                    [menu_button(d, choose_neg_ctrl) for d in expdirs]),
+                    [menu_button(d, handle_choose_neg_ctrl) for d in expdirs]),
                 sub_menu("Select positive control", 
-                    [menu_button(d, choose_pos_ctrl) for d in expdirs]),
-                menu_button("Define threshold", define_threshold),
-                menu_button("View current threshold", view_threshold),
+                    [menu_button(d, handle_choose_pos_ctrl) for d in expdirs]),
+                menu_button("Define threshold", handle_set_threshold),
+                menu_button("View current threshold", handle_view_threshold),
                 menu_button("Cancel 取消", exit_menus),
                 ]),
-            menu_button("Check connection to instrument", hello)]
-    return menu("Bioelectronica Hypercell", menu_items)
+           menu_button("Exit", handle_quit)
+        ]
+    return menu("Bioelectronica Hypercell Configuration", menu_items)
 
 # Load the data directories from master
 expdirs = ['None'] + get_master_dirs()

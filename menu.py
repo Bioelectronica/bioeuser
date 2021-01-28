@@ -3,7 +3,6 @@ import urwid
 import subprocess as sp
 import time
 import pdb
-#from scatter_threshold import scatter_threshold
 import os
 import json
 from set_threshold import set_threshold_interactive
@@ -14,7 +13,7 @@ keep_running = True      # Only way to exit the menu is to set this to false
 exp_running = False      # True if an experiment is currently running on instrument
 neg_ctrl_dir = 'None'    # Directory containing the negative control experiment
 pos_ctrl_dir = 'None'    # Direcotry containing postive control experiment
-exp_data_dir = '/data/data7'   # Where data resides on master nuc (constant)
+exp_data_dir = '/data'   # Where data resides on master nuc (constant)
 thresholds = [0,0]       # Radius and DGM selected by user
 expdirs = None           # List of experiment directories in the master
 
@@ -164,28 +163,25 @@ def handle_set_threshold(button):
     # A negative control experiment directory must be selected, positive one is optional
     if neg_ctrl_dir != 'None':
         if pos_ctrl_dir != 'None':
-            positive_dir = exp_data_dir + '/' + pos_ctrl_dir[:-1]
+            positive_dir = exp_data_dir + '/' + pos_ctrl_dir
         else:
             positive_dir = None
-        negative_dir = exp_data_dir + '/' + neg_ctrl_dir[:-1]
+        negative_dir = exp_data_dir + '/' + neg_ctrl_dir
 
         # Interactively create a json file containing criteria
-        crtjson = scatter_threshold(negative_dir, positive_dir)
-        thresholds[0] = crtjson['particlecriteria']['Radius'][0]
-        thresholds[1] = crtjson['particlecriteria']['Differential Grayscale Mean'][0]
-
-        json_file = '/tmp/newcriteria.json'
+        crtjson = set_threshold_interactive(negative_dir, positive_dir)
+        json_file = '/data/default_settings/user_settings.json'
         with open(json_file, 'w') as f:
             json.dump(crtjson, f)
 
-        # Update all the merge and sample jsons with the user selected value
+        # Update the merge, sample, waste jsons with the user selected value
         masterjsons = ['/data/default_settings/rta_settings_' + cam + '.json'
                 for cam in ['merge1', 'merge2', 'merge5', 'merge6',
                     'sample4', 'sample8', 'waste3', 'waste7']]
         for mj in masterjsons:
             with open(mj, 'r') as f:
                 js = json.load(f)
-            update_dict(js, crtjson)
+            js.update(crtjson)
             with open(mj[:-5] + '_new.json', 'w') as nf:
                 json.dump(js, nf, indent=4)
     else:
@@ -245,7 +241,7 @@ def make_menus(expdirs):
                     [menu_button(d, handle_choose_neg_ctrl) for d in expdirs]),
                 sub_menu("Select positive control", 
                     [menu_button(d, handle_choose_pos_ctrl) for d in expdirs]),
-                menu_button("Define threshold", handle_set_threshold),
+                menu_button("Set threshold", handle_set_threshold),
                 menu_button("View current threshold", handle_view_threshold),
                 menu_button("Cancel 取消", exit_menus),
                 ]),

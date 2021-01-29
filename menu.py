@@ -46,6 +46,13 @@ def item_chosen(button):
     done = menu_button('Ok', exit_menus)
     top.open_box(urwid.Filler(urwid.Pile([response, done])))
 
+def toast(message):
+    """Displays a popup showing the message """
+    txt_widget = urwid.Text([message,'\n'])
+    done = menu_button('Ok', exit_menus)
+    top.open_box(urwid.Filler(urwid.Pile([txt_widget, done])))
+
+
 def exit_menus(button):
     raise urwid.ExitMainLoop()
 
@@ -176,19 +183,17 @@ def handle_set_threshold(button):
 
         # Update the hypercell configuration with the new threshold values
         cfg.update_hypercell_cfg(new_thresholds)
+        handle_view_threshold(button)
+        #raise urwid.ExitMainLoop()
 
     else:
-        print('\nNegative control directory required for threshold adjustment')
-        time.sleep(4)
+        toast('\nNegative control directory required for threshold adjustment')
 
-    raise urwid.ExitMainLoop()
 
 def handle_view_threshold(button):
     """view current thresholds"""
-    info = 'Radius: {:0.2f} to {:0.2f}\n\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}'.format(thresholds[0][0], thresholds[0][1], thresholds[1][0], thresholds[1][1])
-    response = urwid.Text(['Hypercell Sorting Thresholds\n\n', info, '\n\n'])
-    done = menu_button('Ok', exit_menus)
-    top.open_box(urwid.Filler(urwid.Pile([response, done])))
+    info = 'Hypercell Sorting Thresholds\n\nRadius: {:0.2f} to {:0.2f}\n\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}\n'.format(thresholds[0][0], thresholds[0][1], thresholds[1][0], thresholds[1][1])
+    toast(info)
 
 def experiment_state_label():
     """Returns a text label for menu reflecting experiment state.  

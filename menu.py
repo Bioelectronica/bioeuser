@@ -9,13 +9,13 @@ from set_threshold import set_threshold_interactive
 
 
 # Global UI state variables
-keep_running = True      # Only way to exit the menu is to set this to false
-exp_running = False      # True if an experiment is currently running on instrument
-neg_ctrl_dir = 'None'    # Directory containing the negative control experiment
-pos_ctrl_dir = 'None'    # Direcotry containing postive control experiment
-exp_data_dir = '/data'   # Where data resides on master nuc (constant)
-thresholds = [0,0]       # Radius and DGM selected by user
-expdirs = None           # List of experiment directories in the master
+keep_running = True        # Only way to exit the menu is to set this to false
+exp_running = False        # True if an experiment is currently running on instrument
+neg_ctrl_dir = 'None'      # Directory containing the negative control experiment
+pos_ctrl_dir = 'None'      # Direcotry containing postive control experiment
+exp_data_dir = '/data'     # Where data resides on master nuc (constant)
+thresholds = [[0,0],[0,0]] # Radius and DGM selected by user
+expdirs = None             # List of experiment directories in the master
 
 
 def menu_button(caption, callback):
@@ -169,36 +169,30 @@ def handle_set_threshold(button):
         negative_dir = exp_data_dir + '/' + neg_ctrl_dir
 
         # Interactively create a json file containing criteria
-        crtjson = set_threshold_interactive(negative_dir, positive_dir)
-        json_file = '/data/default_settings/user_settings.json'
-        with open(json_file, 'w') as f:
-            json.dump(crtjson, f)
+        new_thresholds = set_threshold_interactive(negative_dir, positive_dir)
 
-        # Update the merge, sample, waste jsons with the user selected value
-        masterjsons = ['/data/default_settings/rta_settings_' + cam + '.json'
-                for cam in ['merge1', 'merge2', 'merge5', 'merge6',
-                    'sample4', 'sample8', 'waste3', 'waste7']]
-        for mj in masterjsons:
-            with open(mj, 'r') as f:
-                js = json.load(f)
-            js.update(crtjson)
-            with open(mj[:-5] + '_new.json', 'w') as nf:
-                json.dump(js, nf, indent=4)
+        thresholds[0] = new_thresholds['particlecriteria']['Radius']
+        thresholds[1] = new_thresholds['particlecriteria']['Differential Grayscale Mean']
+
+        # Update the hypercell configuration with the new threshold values
+        config.update_hypercell_cfg(new_thresholds)
+
     else:
         print('\nNegative control directory required for threshold adjustment')
         time.sleep(4)
+
     raise urwid.ExitMainLoop()
 
 def handle_view_threshold(button):
     """view current thresholds"""
-    response = urwid.Text([button.label,'\n'])
-    done = menu_button('Ok', exit_menus)
-    top.open_box(urwid.Filler(urwid.Pile([response, done])))
-    time.sleep(4)
-
-    #print('\nRadius: {:0.2f}, Differential Grayscale Mean {:0.0f}'.format(
-    #    thresholds[0], thresholds[1]))
+    #response = urwid.Text([button.label,'\n'])
+    #done = menu_button('Ok', exit_menus)
+    #top.open_box(urwid.Filler(urwid.Pile([response, done])))
     #time.sleep(4)
+
+    print('\nRadius: {:0.2f} to {:0.2f}\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}'.format(
+        thresholds[0][0], thresholds[0][1], thresholds[1][0], thresholds[1][1]))
+    time.sleep(4)
     raise urwid.ExitMainLoop()
 
 def experiment_state_label():

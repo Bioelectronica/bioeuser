@@ -6,7 +6,7 @@ import pdb
 import os
 import json
 from set_threshold import set_threshold_interactive
-
+import configure as cfg
 
 # Global UI state variables
 keep_running = True        # Only way to exit the menu is to set this to false
@@ -175,7 +175,7 @@ def handle_set_threshold(button):
         thresholds[1] = new_thresholds['particlecriteria']['Differential Grayscale Mean']
 
         # Update the hypercell configuration with the new threshold values
-        config.update_hypercell_cfg(new_thresholds)
+        cfg.update_hypercell_cfg(new_thresholds)
 
     else:
         print('\nNegative control directory required for threshold adjustment')

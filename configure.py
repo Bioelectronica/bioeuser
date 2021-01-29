@@ -7,8 +7,15 @@ import subprocess as sp
 """ This file contains code to update the configuration of the Hypercell system 
 """
 
-
-
+# Constants
+data_dir = '/data/default_settings'
+cameras = ['merge1', 'merge2', 'merge5', 'merge6',
+    'sample4', 'sample8', 'waste3', 'waste7']
+settings_json = [data_dir + '/rta_settings_' + c + '.json' 
+        for c in cameras]
+slave_url = 'slave'
+user_json = data_dir + 'user_settings.json'
+ 
 def update_dict(d1, d2):
     """Update dictionary d1 with values in dictionary d2.
     This is similar to the python dict update function, except it updates
@@ -82,19 +89,21 @@ def update_hypercell_cfg(newsettings):
     Args:
         newsettings(dict): updated newsettings.  Only keys in this will be updated
     """
+    global user_json
+    global settings_json
+
     # Write a file containing the user-defined changes to settings
-    user_json = '/data/default_settings/user_settings.json'
     with open(user_json, 'w+') as f:
-        json.dump(user_json, f)
+        json.dump(newsettings, f)
 
     # Update the merge, sample, waste jsons with the user selected value
     # (Reminder: this is done on the master NUC)
-    settings_json = ['/data/default_settings/rta_settings_' + cam + '.json'
-                   for cam in ['merge1', 'merge2', 'merge5', 'merge6',
-                               'sample4', 'sample8', 'waste3', 'waste7']]
     [update_json_nested(f, newsettings) for f in settings_json]
 
-    # Now copy these file to the slave, so it has the same settings
-    sp.run(["scp -r /data/default_settings/* slave:/data/defaultsettings"],
-           shell=True)
+    copy_cfg_to_slave()
 
+def copy_cfg_to_slave():
+    """ Copies all configuration files to slave """
+    # Now copy these file to the slave, so it has the same settings
+    command ="scp {} slave:{}".format(' '.join(settings_json), data_dir) 
+    sp.run([command], shell=True)

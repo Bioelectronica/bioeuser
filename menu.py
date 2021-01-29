@@ -185,15 +185,10 @@ def handle_set_threshold(button):
 
 def handle_view_threshold(button):
     """view current thresholds"""
-    #response = urwid.Text([button.label,'\n'])
-    #done = menu_button('Ok', exit_menus)
-    #top.open_box(urwid.Filler(urwid.Pile([response, done])))
-    #time.sleep(4)
-
-    print('\nRadius: {:0.2f} to {:0.2f}\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}'.format(
-        thresholds[0][0], thresholds[0][1], thresholds[1][0], thresholds[1][1]))
-    time.sleep(4)
-    raise urwid.ExitMainLoop()
+    info = 'Radius: {:0.2f} to {:0.2f}\n\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}'.format(thresholds[0][0], thresholds[0][1], thresholds[1][0], thresholds[1][1])
+    response = urwid.Text(['Hypercell Sorting Thresholds\n\n', info, '\n\n'])
+    done = menu_button('Ok', exit_menus)
+    top.open_box(urwid.Filler(urwid.Pile([response, done])))
 
 def experiment_state_label():
     """Returns a text label for menu reflecting experiment state.  

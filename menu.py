@@ -150,7 +150,7 @@ def handle_set_threshold(button):
         # Interactively create a json file containing criteria
         new_thresholds = set_threshold_interactive(negative_dir, positive_dir)
 
-        user_settings['particlecriteria'] = new_thresholds
+        user_settings['particlecriteria'] = new_thresholds['particlecriteria']
 
         # Update the hypercell configuration with the new threshold values
         cfg.update_hypercell_cfg(new_thresholds)

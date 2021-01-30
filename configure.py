@@ -14,7 +14,6 @@ cameras = ['merge1', 'merge2', 'merge5', 'merge6',
 settings_json = [data_dir + '/rta_settings_' + c + '.json' 
         for c in cameras]
 slave_url = 'slave'
-user_json = data_dir + 'user_settings.json'
  
 def update_dict(d1, d2):
     """Update dictionary d1 with values in dictionary d2.
@@ -89,12 +88,7 @@ def update_hypercell_cfg(newsettings):
     Args:
         newsettings(dict): updated newsettings.  Only keys in this will be updated
     """
-    global user_json
     global settings_json
-
-    # Write a file containing the user-defined changes to settings
-    with open(user_json, 'w+') as f:
-        json.dump(newsettings, f)
 
     # Update the merge, sample, waste jsons with the user selected value
     # (Reminder: this is done on the master NUC)

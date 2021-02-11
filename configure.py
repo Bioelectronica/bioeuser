@@ -61,6 +61,19 @@ def update_hypercell_cfg(newsettings, ddir = default_settings_dir):
     copy_files_to_slave(json_files, ddir)
 
 
+def get_hypercell_cfg(ddir):
+    """ Reads hypercell settings, returns the particle and dgm thresholds
+    Args:
+        ddir(str): data directory from which to read the json settings
+
+    Returns:
+        list: radius_threshold (2 element), dgm_threshold (2 element)
+    """
+    with open(ddir + '/' + settings_json[0]) as f:
+        settings = json.load(f)
+    return settings
+
+
 #
 # Helper functions
 #

@@ -20,23 +20,24 @@ Things to test:
 #
 
 # directory on master and slave NUCS where settings are found
-data_dir = '/data/default_settings'
+default_settings_dir = '/data/default_settings'
+current_exp_dir = '/data/current_experiment'
 
 # list of hypercell cameras which map to folder names in data directories
 cameras = ['merge1', 'merge2', 'merge5', 'merge6',
     'sample4', 'sample8', 'waste3', 'waste7']
 
 # list of settings jsons, eg rta_settings_merge1.json, rta_settings_merge2.json, ..
-settings_json = [data_dir + '/rta_settings_' + c + '.json' 
-        for c in cameras]
+settings_json = ['rta_settings_' + c + '.json' for c in cameras]
 slave_url = 'slave'
+
 
 #
 # Main functions
 #
 
-def update_hypercell_cfg(newsettings):
-    """ Updates hypercell default settings in both master and slave nuc
+def update_hypercell_cfg(newsettings, ddir = default_settings_dir):
+    """ Updates hypercell settings in both master and slave nuc
     This function is intended to be run on the master nuc, and changes
     are copied over to the slave NUC
 
@@ -49,14 +50,15 @@ def update_hypercell_cfg(newsettings):
 
     Args:
         newsettings(dict): settings to change.  Only keys in this dict will be updated
+        ddir(str): Which directory to change settings. default is the default_settings directory
     """
     global settings_json
 
     # Update the merge, sample, waste jsons with the user selected value
     # (Reminder: this is done on the master NUC)
-    [update_json_nested(f, newsettings) for f in settings_json]
-
-    copy_cfg_to_slave()
+    json_files = [ddir + '/' + f for f in settings_json]
+    [update_json_nested(f, newsettings) for f in json_files]
+    copy_files_to_slave(json_files, ddir)
 
 
 #
@@ -108,8 +110,14 @@ def update_json_nested(path, d):
         json.dump(js,nf,indent=4)
 
 
-def copy_cfg_to_slave():
-    """ Copies all configuration files to slave """
+def copy_files_to_slave(files, ddir):
+    """ Copy the list of files to slave via SCP
+
+    Args:
+        files(list): list of files to copy
+        ddir(str): directory on slave to copy files
+
+    """
     # Now copy these file to the slave, so it has the same settings
-    command ="scp {} slave:{}".format(' '.join(settings_json), data_dir)
+    command ="scp {} slave:{}".format(' '.join(settings_json), ddir)
     sp.run([command], shell=True)

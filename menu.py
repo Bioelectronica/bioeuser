@@ -10,26 +10,21 @@ import configure as cfg
 
 # Constants
 exp_data_dir = '/data'     # Where data resides on master nuc (constant)
-user_settings_file = '/data/default_settings/user_settings.json'
+default_settings_dir = '/data/default_settings'
+current_exp_dir = '/data/current_experiment'
 
-# Global UI state variables
-keep_running = True        # Only way to exit the menu is to set this to false
-exp_running = False        # True if an experiment is currently running on instrument
+# Global UI variables
+keep_running = True              # Only way to exit the menu is to set this to false
+expdirs = None                   # List of directories in exp_data_dir
+neg_ctrl_dir =  None             # Directory containing the negative control experiment
+pos_ctrl_dir =  None             # Directory containing the positive control experiment
+radius_threshold = [None, None]  # Radius criteria selected by user
+dgm_threshold = [None, None]     # Differential grayscale mean criteria selected by user
 
-expdirs = None    # List of directories in exp_data_dir
-user_settings = {'neg_ctrl_dir': None,
-                 'pos_ctrl_dir': None,
-                 'particlecriteria': {'Radius': [0,0],
-                                      'Differential Grayscale Mean': [0,0]}
-                }
 
-"""
-neg_ctrl_dir = 'None'      # Directory containing the negative control experiment
-pos_ctrl_dir = 'None'      # Direcotry containing postive control experiment
-thresholds = [[0,0],[0,0]] # Radius and DGM selected by user
-expdirs = None             # List of experiment directories in the master
-"""
-
+#
+# URWID CASCADING MENUS
+#
 def menu_button(caption, callback):
     """Returns AtttrMap-decorated button, with a click callback"""
     button = urwid.Button(caption)
@@ -64,12 +59,26 @@ def toast(message):
     done = menu_button('Ok', exit_menus)
     top.open_box(urwid.Filler(urwid.Pile([txt_widget, done])))
 
+def bigtext(button):
+    """ NOT CURRENTLY USED Displays a popup showing the message """
+    txt1 = urwid.BigText('Bioelectronica', urwid.HalfBlock5x4Font())
+    #pdb.set_trace()
+    bt1 = urwid.Padding(txt1, width='clip', min_width=200)
+    txt2 = urwid.BigText('Hypercell', urwid.HalfBlock5x4Font())
+    #pdb.set_trace()
+    bt2 = urwid.Padding(txt2, width='clip', min_width=200)
+    done = menu_button('Ok', exit_menus)
+    top.open_box(urwid.Filler(urwid.Pile([bt1, bt2, done])))
+    #top.open_box(urwid.Filler(urwid.Pile([bt, done])))
+
 
 def exit_menus(button):
+    """Exits the current menu, go back to the main menu"""
     raise urwid.ExitMainLoop()
 
+
 class CascadingBoxes(urwid.WidgetPlaceholder):
-    """ A widget that provides an open_box method, that displays a box on 
+    """ A widget that provides an open_box method, that displays a box on
     top of previous content. Each successive box shifted to the right and down.
     Pressing ESC removes the current box and shows the previous one """
 
@@ -96,33 +105,203 @@ class CascadingBoxes(urwid.WidgetPlaceholder):
         else:
             return super(CascadingBoxes, self).keypress(size, key)
 
+
 #
-# BUTTON EVENT HANDLER FUNCTIONS
+# HELPER FUNCTIONS
 #
+def get_master_dirs():
+    """returns a list of directories in the master /data directory"""
+    # SSH to master and get the list of data directories
+    dirs = [f.path for f in os.scandir(exp_data_dir) if f.is_dir()]
+    dirs = [os.path.basename(d) for d in dirs]  # d[6:]
+    return dirs
+
+def set_threshold(ddir):
+    """ set radius and dgm threshold based on typed user input 
+    Args:
+        ddir: which directory to modify json files
+    """
+    class ConversationListBox(urwid.ListBox):
+        def __init__(self, questionlist, ddir):
+            editlist = [urwid.Edit(q + "\n") for q in questionlist]
+            body = urwid.SimpleFocusListWalker(editlist)
+            super(ConversationListBox, self).__init__(body)
+            self.ddir = ddir
+
+        def keypress(self, size, key):
+            # terrible to use global variables, but urwid widgets cannot
+            # return values, so I don't see a good way to set
+            # the thresholds without using globals
+            global radius_threshold
+            global dgm_threshold
+
+            key = super(ConversationListBox, self).keypress(size, key)
+            if key != 'enter':
+                return key
+
+            # If the user hits enter in the last entry position
+            # exit the menu
+            if self.focus_position == 3:
+                def parse_input(string):
+                    if string.strip() in ['', 'null', 'Null', 'none', 'None']:
+                        return None
+                    else:
+                        return float(string)
+
+                # Save all the values
+                radius_threshold[0] = parse_input(self.body[0].edit_text)
+                radius_threshold[1] = parse_input(self.body[1].edit_text)
+                dgm_threshold[0] = parse_input(self.body[2].edit_text)
+                dgm_threshold[1] = parse_input(self.body[3].edit_text)
+
+                # Update the hypercell configuration with the new threshold values
+                new_thresholds = {'particlecriteria': 
+                                  {'Radius': \
+                                   [radius_threshold[0], radius_threshold[1]],
+                                   'Differential Grayscale Mean': \
+                                   [dgm_threshold[0], dgm_threshold[1]]}}
+                cfg.update_hypercell_cfg(new_thresholds, ddir = self.ddir)
+
+                # Exit to main menu
+                raise urwid.ExitMainLoop()
+            else:
+                self.focus_position += 1
+
+    questionlist = ['Enter Radius lower threshold (or leave blank):',
+                    'Enter Radius upper threshold (or leave blank):',
+                    'Enter Differential Grayscale Mean lower threshold (or leave blank):',
+                    'Enter Differential Grayscale Mean upper threshold (or leave blank):']
+    #title = urwid.Text(['Set Hypercell Thresholds', '\n'])
+    top.open_box(ConversationListBox(questionlist, ddir))
+    #p = urwid.Filler(urwid.Pile([title, ConversationListBox(questionlist)]))
+    #top.open_box(p)
+
+# 
+# HELPER FUNCTIONS
+# 
+def read_threshold(ddir):
+    """ Reads a hypercell settings in ddir, returns the particle and dgm thresholds
+    Args:
+        ddir(str): data directory from which to read the json settings
+
+    Returns:
+        list: radius_threshold (2 element), dgm_threshold (2 element)
+    """
+    settings = cfg.get_hypercell_cfg(ddir)
+    return (settings['particlecriteria']['Radius'],
+            settings['particlecriteria']['Differential Grayscale Mean'])
+
 
 def get_master_dirs():
     """returns a list of directories in the master /data directory"""
     # SSH to master and get the list of data directories
     dirs = [f.path for f in os.scandir(exp_data_dir) if f.is_dir()]
-    dirs = [d[6:] for d in dirs]
+    dirs = [os.path.basename(d) for d in dirs] 
     return dirs
 
-def handle_refresh_data_dir(button):
-    global expdirs
-    """Refreshes list of data directories on master"""
-    expdirs = ['None'] + get_master_dirs()
-    raise urwid.ExitMainLoop()
+def set_threshold(ddir):
+    """ set radius and dgm threshold based on typed user input 
+    Args:
+        ddir: which directory to modify json files
+    """
+    class ConversationListBox(urwid.ListBox):
+        def __init__(self, questionlist, ddir):
+            editlist = [urwid.Edit(q + "\n") for q in questionlist]
+            body = urwid.SimpleFocusListWalker(editlist)
+            super(ConversationListBox, self).__init__(body)
+            self.ddir = ddir
+
+        def keypress(self, size, key):
+            # terrible to use global variables, but urwid widgets cannot
+            # return values, so I don't see a good way to set
+            # the thresholds without using globals
+            global radius_threshold
+            global dgm_threshold
+
+            key = super(ConversationListBox, self).keypress(size, key)
+            if key != 'enter':
+                return key
+
+            # If the user hits enter in the last entry position
+            # exit the menu
+            if self.focus_position == 3:
+                def parse_input(string):
+                    if string.strip() in ['', 'null', 'Null', 'none', 'None']:
+                        return None
+                    else:
+                        return float(string)
+
+                # Save all the values
+                radius_threshold[0] = parse_input(self.body[0].edit_text)
+                radius_threshold[1] = parse_input(self.body[1].edit_text)
+                dgm_threshold[0] = parse_input(self.body[2].edit_text)
+                dgm_threshold[1] = parse_input(self.body[3].edit_text)
+
+                # Update the hypercell configuration with the new threshold values
+                new_thresholds = {'particlecriteria': 
+                                  {'Radius': \
+                                   [radius_threshold[0], radius_threshold[1]],
+                                   'Differential Grayscale Mean': \
+                                   [dgm_threshold[0], dgm_threshold[1]]}}
+                cfg.update_hypercell_cfg(new_thresholds, ddir = self.ddir)
+
+                # Exit to main menu
+                raise urwid.ExitMainLoop()
+            else:
+                self.focus_position += 1
+
+    questionlist = ['Enter Radius lower threshold (or leave blank):',
+                    'Enter Radius upper threshold (or leave blank):',
+                    'Enter Differential Grayscale Mean lower threshold (or leave blank):',
+                    'Enter Differential Grayscale Mean upper threshold (or leave blank):']
+    #title = urwid.Text(['Set Hypercell Thresholds', '\n'])
+    top.open_box(ConversationListBox(questionlist, ddir))
+    #p = urwid.Filler(urwid.Pile([title, ConversationListBox(questionlist)]))
+    #top.open_box(p)
+
+
+def read_threshold(ddir):
+    """ Reads a json settings in ddir, returns the particle and dgm thresholds
+    Args:
+        ddir(str): data directory from which to read the json settings
+
+    Returns:
+        list: radius_threshold (2 element), dgm_threshold (2 element)
+    """
+    with open(ddir + '/rta_settings_merge1.json') as f:
+        settings = json.load(f)
+    return (settings['particlecriteria']['Radius'],
+            settings['particlecriteria']['Differential Grayscale Mean'])
+
+
+def view_threshold(radius_threshold, dgm_threshold):
+    """ show the radius and dgm threshold in a toast message
+    Args:
+        radius_threshold: 2 element list of radius criteria
+        dgm_threshold: 2 element list of dgm criteria
+    """
+    info = 'Hypercell Sorting Thresholds\n\n' + \
+           'Radius\nLower limit: {}\nUpper limit: {}\n\n'.format(
+           radius_threshold[0], radius_threshold[1]) + \
+           'Differential Grayscale Mean\nLower limit: {}\nUpper limit: {}\n'.format(
+           dgm_threshold[0], dgm_threshold[1])
+    toast(info)
+
+
+#
+# BUTTON EVENT HANDLER FUNCTIONS
+#
 
 def handle_choose_neg_ctrl(button):
     """Select directory on master containing negative control"""
-    global user_settings
-    user_settings['neg_ctrl_dir'] = None if button.label=='None' else button.label
+    global neg_ctrl_dir
+    neg_ctrl_dir = None if button.label=='None' else button.label
     raise urwid.ExitMainLoop()
 
 def handle_choose_pos_ctrl(button):
     """Select directory on master containing negative control"""
-    global user_settings
-    user_settings['pos_ctrl_dir'] = None if button.label=='None' else button.label
+    global pos_ctrl_dir
+    pos_ctrl_dir = None if button.label=='None' else button.label
     raise urwid.ExitMainLoop()
 
 def handle_quit(button):
@@ -131,107 +310,88 @@ def handle_quit(button):
     keep_running = False
     raise urwid.ExitMainLoop()
 
-def handle_set_threshold(button):
-    """ Change selection criteria""" 
-    global user_settings
+
+def handle_plot(button):
+    """ Plot radius and DGM """
+    global neg_ctrl_dir
+    global pos_ctrl_dir
+    global radius_threshold
+    global dgm_threshold
 
     # Allow user to select thresholds graphically
     # Update the jsons in the master based on the selected threshold
     # A negative control experiment directory must be selected, positive one is optional
-    if user_settings['neg_ctrl_dir'] is None:
-        toast('\nNegative control directory required for threshold adjustment')
+    if neg_ctrl_dir is None:
+        toast('\nNegative control directory required for plot')
     else:
-        if user_settings['pos_ctrl_dir'] is None:
+        if pos_ctrl_dir is None:
             positive_dir = None
         else:
-            positive_dir = exp_data_dir + '/' + user_settings['pos_ctrl_dir']
-        negative_dir = exp_data_dir + '/' + user_settings['neg_ctrl_dir']
+            positive_dir = exp_data_dir + '/' + pos_ctrl_dir
+        negative_dir = exp_data_dir + '/' + neg_ctrl_dir
 
-        # Interactively create a json file containing criteria
+        # Allow user to draw thresholds on a plot
         new_thresholds = set_threshold_interactive(negative_dir, positive_dir)
+        radius_threshold = new_thresholds['particlecriteria']['Radius']
+        dgm_threshold = new_thresholds['particlecriteria']['Differential Grayscale Mean']
 
-        user_settings['particlecriteria'] = new_thresholds['particlecriteria']
+        # print out the thresholds drawn on plot
+        view_threshold(radius_threshold, dgm_threshold)
 
-        # Update the hypercell configuration with the new threshold values
-        cfg.update_hypercell_cfg(new_thresholds)
-        handle_view_threshold(button)
-        #raise urwid.ExitMainLoop()
-
-
-def handle_view_threshold(button):
-    """view current thresholds"""
-    info = 'Hypercell Sorting Thresholds\n\n' + \
-        'Radius: {:0.2f} to {:0.2f}'.format( \
-        user_settings['particlecriteria']['Radius'][0], \
-        user_settings['particlecriteria']['Radius'][1]) + \
-        '\n\nDifferential Grayscale Mean: {:0.0f} to {:0.0f}\n'.format(\
-        user_settings['particlecriteria']['Differential Grayscale Mean'][0], \
-        user_settings['particlecriteria']['Differential Grayscale Mean'][1])
-    toast(info)
+def handle_view_threshold_default(button):
+    global default_settings_dir
+    radius_threshold, dgm_threshold = read_threshold(default_settings_dir)
+    view_threshold(radius_threshold, dgm_threshold)
 
 
-def experiment_state_label():
-    """Returns a text label for menu reflecting experiment state.
-    Depends on whether exp is running or stopped"""
-    if exp_running:
-        return "Stop Experiment 完成实验"
-    else:
-        return "Run Experiment 开始实验"
+def handle_view_threshold_current(button):
+    global current_exp_dir
+    radius_threshold, dgm_threshold = read_threshold(current_exp_dir)
+    view_threshold(radius_threshold, dgm_threshold)
+
+
+def handle_set_threshold_default(button):
+    global default_settings_dir
+    set_threshold(default_settings_dir)
+
+
+def handle_set_threshold_current(button):
+    global current_exp_dir
+    set_threshold(current_exp_dir)
+
 
 def make_menus(expdirs):
     """ Creates a hierarchy of menus, used to create the CascadingBoxes widget
 
     Args:
-        expdirs(list):  list of experimental directories to show in menu
+        expdirs(list):  list of experimental directories to show in the first 2 submenus
 
     Returns:
         obj: A urwid menu object
     """
 
-    """
-    # Start or stop experiment
-    menu_items = [sub_menu(experiment_state_label(), [
-                menu_button("Confirm 确认 " + experiment_state_label(), handle_experiment),
-                menu_button("Cancel 取消", exit_menus),
-                ])]
-    """
-    if not(exp_running):
-        menu_items = [
-           sub_menu("Change Selection Criteria", [
-                menu_button("Refresh data directories", handle_refresh_data_dir),
-                sub_menu("Select negative control",
-                    [menu_button(d, handle_choose_neg_ctrl) for d in expdirs]),
-                sub_menu("Select positive control",
-                    [menu_button(d, handle_choose_pos_ctrl) for d in expdirs]),
-                menu_button("Set threshold", handle_set_threshold),
-                menu_button("View current threshold", handle_view_threshold),
-                menu_button("Cancel 取消", exit_menus),
-                ]),
-           menu_button("Exit", handle_quit)
-        ]
+    menu_items = [
+        sub_menu("Select negative control directory",
+                 [menu_button(d, handle_choose_neg_ctrl) for d in expdirs]),
+        sub_menu("Select positive control directory",
+                [menu_button(d, handle_choose_pos_ctrl) for d in expdirs]),
+        menu_button("Plot particle DGM vs. particle radius", handle_plot),
+        menu_button("Set default threshold", handle_set_threshold_default),
+        menu_button("View default threshold", handle_view_threshold_default),
+        menu_button("Set current experiment threshold", handle_set_threshold_current),
+        menu_button("View current experiment threshold", handle_view_threshold_current),
+        menu_button("Exit", handle_quit)
+    ]
     return menu("Bioelectronica Hypercell Configuration", menu_items)
 
 
 def load_menu_state():
     """Initializes the menu and the UI state variables from the user
     settings file """
-    global user_settings
-    global user_settings_file
     global expdirs
-    if os.path.exists(user_settings_file):
-        with open(user_settings_file) as f:
-            user_settings = json.load(f)
 
     # Load the data directories from master
     expdirs = ['None'] + get_master_dirs()
-
-
-def save_menu_state():
-    """Saves the UI settings to the user settings file"""
-    global user_settings
-    global user_settings_file
-    with open(user_settings_file, 'w+') as f:
-        json.dump(user_settings, f)
 
 
 # Start the UI loop
@@ -240,5 +400,4 @@ while keep_running:
     # Create and show the menus
     top = CascadingBoxes(make_menus(expdirs))
     urwid.MainLoop(top, palette=[('reversed', 'standout', '')]).run()
-save_menu_state()
 
